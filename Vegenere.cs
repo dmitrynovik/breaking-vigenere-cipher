@@ -35,12 +35,11 @@ namespace A1
         }
 
         //[Test]
-        public int ComputeKeyLength(out double[] freqs)
+        public int ComputeKeyLength()
         {
             double max = 0;
             int maxLen = 0;
             const int maxKeyLength = 13;
-            freqs = new double[VocabularyLength];
 
             for (var i = 1; i <= maxKeyLength; ++i)
             {
@@ -63,10 +62,6 @@ namespace A1
                 {
                     max = sum;
                     maxLen = i;
-                    for (int k = 0; k < VocabularyLength; ++k)
-                    {
-                        freqs[k] = bytes[k]/(double) count;
-                    }
                 }
             }
             Console.WriteLine("LENGTH: {0}, MAX: {1}", maxLen, max);
@@ -76,8 +71,9 @@ namespace A1
         [Test]
         public void ComputeKey()
         {
-            double[] freqs;
-            var keyLen = ComputeKeyLength(out freqs);
+            var keyLen = ComputeKeyLength();
+            var freqs = GetEngFreqs();
+
             byte[] key = new byte[keyLen];
 
             for (int i = 0; i < keyLen; ++i)
@@ -102,13 +98,14 @@ namespace A1
 
                     if (valid)
                     {
-                        //Console.WriteLine("{0}Valid: {1}", i, (char)j);
+                        // Console.WriteLine("{0}Valid: {1}", i, (char)j);
                         int count = 1;
                         for (int pos = i; pos < _input.Length; pos += keyLen)
                         {
                             var b = _input[pos] ^ j;
                             char ch = char.ToLower((char)b);
                             var loByte = (byte) ch;
+                            // tabulate observed frequencies:
                             observed[loByte] = observed[loByte] + 1;
                             count++;
                         }
@@ -116,23 +113,9 @@ namespace A1
                         double[] oFreqs = observed.Select(o => o/(double) count).ToArray();
                         double[] result = new double[VocabularyLength];
 
-                        int maxX = 0, maxY = 0;
-                        for (int x = 0; x < VocabularyLength; x++)
-                        {
-                            if (maxX < freqs[x])
-                                maxX = x;
-                        }
-
-                        for (int y = 0; y < VocabularyLength; y++)
-                        {
-                            if (maxY < oFreqs[y])
-                                maxY = y;
-                        }
-                        var diff = maxX - maxY;
-
                         for (int k = 0; k < VocabularyLength; ++k)
                         {
-                            result[k] = oFreqs[k] * freqs[(k + diff) % VocabularyLength];
+                            result[k] = oFreqs[k] * freqs[k];
                         }
 
                         var sum = result.Sum();
@@ -150,21 +133,57 @@ namespace A1
                 key[i] = found;
             }
 
-            // TO BE REMOVED:
             //key = new byte[] {0xba, 0x1f, 0x91, 0xb2, 0x53, 0xcd, 0x3e};
 
             Console.WriteLine("Result\n");
             byte[] xored = new byte[_input.Length];
             for (int i = 0; i < _input.Length; ++i)
             {
-                var b = _input[i];
-                var k = key[i%keyLen];
-                byte d = (byte) (b ^ k);
+                byte d = (byte) (_input[i] ^ key[i % keyLen]);
                 xored[i] = d;
             }
 
             var ret = Encoding.ASCII.GetString(xored);
             Console.WriteLine(ret);
+        }
+
+        private double[] GetEngFreqs()
+        {
+            var ret = new double[VocabularyLength];
+
+            ret[(byte)'a'] = 8.167;
+            ret[(byte)'b'] = 1.492;
+            ret[(byte)'c'] = 2.782;
+            ret[(byte)'d'] = 4.253;
+            ret[(byte)'e'] = 12.702;
+            ret[(byte)'f'] = 2.228;
+            ret[(byte)'g'] = 2.015;
+            ret[(byte)'h'] = 6.094;
+            ret[(byte)'i'] = 6.966;
+            ret[(byte)'j'] = 0.153;
+            ret[(byte)'k'] = 0.772;
+            ret[(byte)'l'] = 4.025;
+            ret[(byte)'m'] = 2.406;
+            ret[(byte)'n'] = 6.749;
+            ret[(byte)'o'] = 7.507;
+            ret[(byte)'p'] = 1.929;
+            ret[(byte)'q'] = 0.095;
+            ret[(byte)'r'] = 5.987;
+            ret[(byte)'s'] = 6.327;
+            ret[(byte)'t'] = 9.056;
+            ret[(byte)'u'] = 2.758;
+            ret[(byte)'v'] = 0.978;
+            ret[(byte)'w'] = 2.361;
+            ret[(byte)'x'] = 0.15;
+            ret[(byte)'y'] = 1.974;
+            ret[(byte)'z'] = 0.074;
+
+            for (int i = 0; i < ret.Length; i++)
+            {
+                ret[i] = ret[i]/100.0d;
+            }
+
+            return ret;
         }
     }
 }
