@@ -77,7 +77,7 @@ namespace A1
         {
             var watch = Stopwatch.StartNew();
             var keyLen = ComputeKeyLength();
-            var freqs = GetEngFreqs();
+            var freqs = EnglishLetterFrequencies();
             var divisor = _input.Length/(decimal)keyLen;
             byte[] key = new byte[keyLen];
 
@@ -159,7 +159,7 @@ namespace A1
                 Console.WriteLine(format, args);
         }
 
-        private double[] GetEngFreqs()
+        private double[] EnglishLetterFrequencies()
         {
             var ret = new double[AlphabetSize];
 
