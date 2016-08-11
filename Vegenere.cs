@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace A1
     public class Vegenere
     {
         private readonly byte[] _input;
-        const int VocabularyLength = 256;
+        const int AlphabetSize = 256;
 
         [Test]
         public void ParseByte()
@@ -44,7 +45,7 @@ namespace A1
             for (var i = 1; i <= maxKeyLength; ++i)
             {
                 var count = 0;
-                int[] bytes = new int[VocabularyLength];
+                int[] bytes = new int[AlphabetSize];
                 for (var j = 0; j < _input.Length; j++)
                 {
                     var pos = i*j;
@@ -57,38 +58,41 @@ namespace A1
                 }
 
                 double sum = bytes.Sum(b => Math.Pow( (b/(double) count), 2));
-                Console.WriteLine("Length: {0}, result: {1}", i, sum);
+                //Console.WriteLine("Length: {0}, result: {1}", i, sum);
                 if (sum > max)
                 {
                     max = sum;
                     maxLen = i;
                 }
             }
-            Console.WriteLine("LENGTH: {0}, MAX: {1}", maxLen, max);
+            Console.WriteLine("KEY LENGTH: {0}, MAX: {1}", maxLen, max);
             return maxLen;
         }
 
         [Test]
         public void ComputeKey()
         {
+            var watch = Stopwatch.StartNew();
+
             var keyLen = ComputeKeyLength();
             var freqs = GetEngFreqs();
+            var divisor = _input.Length/(decimal)keyLen;
 
             byte[] key = new byte[keyLen];
 
             for (int i = 0; i < keyLen; ++i)
             {
-                double maxSum = 0;
+                decimal maxSum = 0;
                 byte found = 0;
 
-                for (int j = 0; j < VocabularyLength; ++j)
+                for (int j = 0; j < AlphabetSize; ++j)
                 {
                     bool valid = true;
-                    int[] observed = new int[VocabularyLength];
+                    decimal[] observed = new decimal[AlphabetSize];
 
                     for (int pos = i; pos < _input.Length; pos += keyLen)
                     {
-                        var b = _input[i] ^ j;
+                        var b = _input[pos] ^ j;
                         if (b < 32 || b > 127)
                         {
                             valid = false;
@@ -99,23 +103,20 @@ namespace A1
                     if (valid)
                     {
                         // Console.WriteLine("{0}Valid: {1}", i, (char)j);
-                        int count = 1;
-                        for (int pos = i; pos < _input.Length; pos += keyLen)
+                        int count = 0;
+                        for (int pos = i; pos < _input.Length; pos += keyLen, count++)
                         {
                             var b = _input[pos] ^ j;
                             char ch = char.ToLower((char)b);
                             var loByte = (byte) ch;
                             // tabulate observed frequencies:
-                            observed[loByte] = observed[loByte] + 1;
-                            count++;
+                            observed[loByte] += (1m / divisor);
                         }
 
-                        double[] oFreqs = observed.Select(o => o/(double) count).ToArray();
-                        double[] result = new double[VocabularyLength];
-
-                        for (int k = 0; k < VocabularyLength; ++k)
+                        var result = new decimal[AlphabetSize];
+                        for (int k = 0; k < AlphabetSize; ++k)
                         {
-                            result[k] = oFreqs[k] * freqs[k];
+                            result[k] = observed[k] * (decimal)freqs[k];
                         }
 
                         var sum = result.Sum();
@@ -129,7 +130,7 @@ namespace A1
 
                 } // byte j
 
-                Console.WriteLine("{0} {1:X}", i, found);
+                Console.WriteLine("Byte {0}: {1:X}", i, found);
                 key[i] = found;
             }
 
@@ -143,14 +144,18 @@ namespace A1
                 xored[i] = d;
             }
 
-            var ret = Encoding.ASCII.GetString(xored);
+            var ret = Encoding.ASCII.GetString(xored).ToLower();
             Console.WriteLine(ret);
+
+            watch.Stop();
+            Console.WriteLine("\nelapsed: {0}", watch.Elapsed);
         }
 
         private double[] GetEngFreqs()
         {
-            var ret = new double[VocabularyLength];
+            var ret = new double[AlphabetSize];
 
+            // https://en.wikipedia.org/wiki/Letter_frequency
             ret[(byte)'a'] = 8.167;
             ret[(byte)'b'] = 1.492;
             ret[(byte)'c'] = 2.782;
