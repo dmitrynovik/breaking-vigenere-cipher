@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -9,7 +8,8 @@ using NUnit.Framework;
 namespace A1
 {
     /// <summary>
-    /// The solution breaks the Vigenere cipher (input hardoded, but could be generalized)
+    /// The solution breaks the Vigenere cipher (input hardoded, but could be generalized).
+    /// It solves The Assignment 1 of Maryland University's Cryptography Coursera course.
     /// https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher
     /// </summary>
     [TestFixture]
