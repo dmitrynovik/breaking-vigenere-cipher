@@ -8,11 +8,15 @@ using NUnit.Framework;
 
 namespace A1
 {
+    /// <summary>
+    /// The solution breaks the Vigenere cipher (input hardoded, but could be generalized)
+    /// https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher
+    /// </summary>
     [TestFixture]
     public class Vegenere
     {
         private readonly byte[] _input;
-        const int AlphabetSize = 256;
+        const int AlphabetSize = 256; // Just plain ASCII
 
         [Test]
         public void ParseByte()
@@ -35,7 +39,6 @@ namespace A1
             _input = bytes.ToArray();
         }
 
-        //[Test]
         public int ComputeKeyLength()
         {
             double max = 0;
@@ -57,15 +60,15 @@ namespace A1
                     count++;
                 }
 
+                // The highest sum of squares will give the most likely key size:
                 double sum = bytes.Sum(b => Math.Pow( (b/(double) count), 2));
-                //Console.WriteLine("Length: {0}, result: {1}", i, sum);
                 if (sum > max)
                 {
                     max = sum;
                     maxLen = i;
                 }
             }
-            Console.WriteLine("KEY LENGTH: {0}, MAX: {1}", maxLen, max);
+            Debug("Key Length: {0}, max score: {1}", maxLen, max);
             return maxLen;
         }
 
@@ -73,13 +76,12 @@ namespace A1
         public void ComputeKey()
         {
             var watch = Stopwatch.StartNew();
-
             var keyLen = ComputeKeyLength();
             var freqs = GetEngFreqs();
             var divisor = _input.Length/(decimal)keyLen;
-
             byte[] key = new byte[keyLen];
 
+            Debug("\nKey:");
             for (int i = 0; i < keyLen; ++i)
             {
                 decimal maxSum = 0;
@@ -88,13 +90,14 @@ namespace A1
                 for (int j = 0; j < AlphabetSize; ++j)
                 {
                     bool valid = true;
-                    decimal[] observed = new decimal[AlphabetSize];
+                    decimal[] observedFreqs = new decimal[AlphabetSize];
 
                     for (int pos = i; pos < _input.Length; pos += keyLen)
                     {
                         var b = _input[pos] ^ j;
                         if (b < 32 || b > 127)
                         {
+                            // non-printable character, discard:
                             valid = false;
                             break;
                         }
@@ -102,7 +105,6 @@ namespace A1
 
                     if (valid)
                     {
-                        // Console.WriteLine("{0}Valid: {1}", i, (char)j);
                         int count = 0;
                         for (int pos = i; pos < _input.Length; pos += keyLen, count++)
                         {
@@ -110,33 +112,31 @@ namespace A1
                             char ch = char.ToLower((char)b);
                             var loByte = (byte) ch;
                             // tabulate observed frequencies:
-                            observed[loByte] += (1m / divisor);
+                            observedFreqs[loByte] += (1m / divisor);
                         }
 
                         var result = new decimal[AlphabetSize];
                         for (int k = 0; k < AlphabetSize; ++k)
                         {
-                            result[k] = observed[k] * (decimal)freqs[k];
+                            result[k] = observedFreqs[k] * (decimal)freqs[k];
                         }
 
+                        // Again, the highest match is the most likely key's byte[i]:
                         var sum = result.Sum();
-                        //var variance = Math.Abs(0.065 - sum);
-                        if (/*variance < maxSum*/ maxSum < sum)
+                        if (maxSum < sum)
                         {
-                            maxSum = sum; // variance
+                            maxSum = sum; 
                             found = (byte)j;
                         }
                     }
 
                 } // byte j
 
-                Console.WriteLine("Byte {0}: {1:X}", i, found);
+                Debug("0x{0:X}", found);
                 key[i] = found;
             }
 
-            //key = new byte[] {0xba, 0x1f, 0x91, 0xb2, 0x53, 0xcd, 0x3e};
-
-            Console.WriteLine("Result\n");
+            Console.WriteLine("\nDecoded\n");
             byte[] xored = new byte[_input.Length];
             for (int i = 0; i < _input.Length; ++i)
             {
@@ -144,11 +144,19 @@ namespace A1
                 xored[i] = d;
             }
 
-            var ret = Encoding.ASCII.GetString(xored).ToLower();
-            Console.WriteLine(ret);
+            var ret = Encoding.ASCII.GetString(xored);
+            Debug(ret);
 
             watch.Stop();
-            Console.WriteLine("\nelapsed: {0}", watch.Elapsed);
+            Debug("\nelapsed: {0}", watch.Elapsed);
+        }
+
+        private void Debug(string format, params object[] args)
+        {
+            if (args == null)
+                Console.WriteLine(format);
+            else
+                Console.WriteLine(format, args);
         }
 
         private double[] GetEngFreqs()
